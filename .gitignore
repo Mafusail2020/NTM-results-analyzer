@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Node
+node_modules/
+dist/
+frontend/.vite/
+
+# Data (raw and processed, both regenerable / too large for git)
+backend/data/raw/
+backend/data/processed/
+
+# OS
+.DS_Store
