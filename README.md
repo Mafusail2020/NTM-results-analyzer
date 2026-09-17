@@ -54,9 +54,15 @@ data changes.
 2. Root Directory: `backend`
 3. Build Command: `pip install -r requirements.txt`
 4. Start Command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
-5. Environment variable `CORS_ORIGINS` → your Vercel URL once you have it (e.g.
+5. Environment variable `PYTHON_VERSION` → `3.12.7`. Render's default Python image has moved
+   ahead of what `pydantic-core` (a Rust/maturin package) ships prebuilt wheels for, so without
+   this the build tries to compile it from source and fails (`cargo metadata` / read-only
+   filesystem error). This env var is the reliable fix; `backend/.python-version` is set the
+   same way as a backup but Render's exact lookup behavior in a monorepo (Root Directory =
+   `backend`, not repo root) isn't guaranteed, so set the env var too.
+6. Environment variable `CORS_ORIGINS` → your Vercel URL once you have it (e.g.
    `https://your-app.vercel.app`). Comma-separate multiple origins.
-6. Deploy, then note the Render URL (e.g. `https://your-app.onrender.com`).
+7. Deploy, then note the Render URL (e.g. `https://your-app.onrender.com`).
 
 **Frontend on Vercel:**
 1. New Project → import this repo.
