@@ -13,6 +13,7 @@ import {
   fetchCorrelation,
   fetchAlerts,
   fetchAlertsDaily,
+  API_ROOT,
 } from './api.js'
 
 function toDecimalYear(dateStr) {
@@ -212,7 +213,7 @@ export default function App() {
     return (
       <div className="app-shell">
         <p className="empty-note">
-          Could not reach the API at localhost:8000 ({metaError}). Is the backend running?
+          Could not reach the API at {API_ROOT} ({metaError}). Is the backend running?
         </p>
       </div>
     )

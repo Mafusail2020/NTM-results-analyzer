@@ -1,4 +1,5 @@
-const BASE_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api`
+export const API_ROOT = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+const BASE_URL = `${API_ROOT}/api`
 
 async function get(path, params = {}) {
   const url = new URL(`${BASE_URL}${path}`)
