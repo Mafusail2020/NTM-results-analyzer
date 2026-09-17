@@ -42,6 +42,37 @@ npm run dev
 Opens on `http://localhost:5173` (or the next free port) and expects the API at
 `http://localhost:8000`.
 
+## Deployment (Render + Vercel)
+
+The processed data file (`backend/data/processed/aggregates.json`, ~4MB) is committed to
+git specifically so a fresh deploy has real data without needing the multi-GB raw CSVs.
+Re-run `python scripts/build_aggregates.py` and commit the updated file whenever the raw
+data changes.
+
+**Backend on Render:**
+1. New Web Service → connect this repo.
+2. Root Directory: `backend`
+3. Build Command: `pip install -r requirements.txt`
+4. Start Command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+5. Environment variable `CORS_ORIGINS` → your Vercel URL once you have it (e.g.
+   `https://your-app.vercel.app`). Comma-separate multiple origins.
+6. Deploy, then note the Render URL (e.g. `https://your-app.onrender.com`).
+
+**Frontend on Vercel:**
+1. New Project → import this repo.
+2. Root Directory: `frontend`
+3. Framework Preset: Vite (build command `npm run build`, output `dist` — both auto-detected).
+4. Environment variable `VITE_API_URL` → your Render URL from above (no trailing slash, no
+   `/api`).
+5. Deploy.
+
+Then go back to Render and set `CORS_ORIGINS` to the actual Vercel URL you were assigned
+(Vercel gives you the URL after the first deploy), and redeploy the backend so it takes
+effect.
+
+Render's free tier spins down on idle, so the first request after a while will be slow
+(~30-60s cold start) — normal, not a bug.
+
 ## Data notes (see `backend/app/aggregation.py` and `backend/scripts/build_aggregates.py` for
 the authoritative details)
 

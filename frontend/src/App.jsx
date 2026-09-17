@@ -40,6 +40,53 @@ function grayscaleForYear(year) {
   return BG_GRAYSCALE_PEACE + t * (BG_GRAYSCALE_WAR - BG_GRAYSCALE_PEACE)
 }
 
+const DEFAULT_CARD_ORDER = ['score', 'gender', 'alerts', 'correlation']
+const CARD_ORDER_STORAGE_KEY = 'chartCardOrder'
+
+function loadCardOrder() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(CARD_ORDER_STORAGE_KEY))
+    if (Array.isArray(saved) && DEFAULT_CARD_ORDER.every((id) => saved.includes(id)) && saved.length === DEFAULT_CARD_ORDER.length) {
+      return saved
+    }
+  } catch {
+    // ignore malformed/blocked storage, fall back to default
+  }
+  return DEFAULT_CARD_ORDER
+}
+
+function ChartCard({ title, caption, canMoveUp, canMoveDown, onMoveUp, onMoveDown, children }) {
+  return (
+    <div className="card">
+      <div className="card-title-row">
+        <p className="card-title">{title}</p>
+        <div className="card-move-buttons">
+          <button
+            className="move-btn"
+            onClick={onMoveUp}
+            disabled={!canMoveUp}
+            aria-label="Move chart up"
+            title="Move up"
+          >
+            ▲
+          </button>
+          <button
+            className="move-btn"
+            onClick={onMoveDown}
+            disabled={!canMoveDown}
+            aria-label="Move chart down"
+            title="Move down"
+          >
+            ▼
+          </button>
+        </div>
+      </div>
+      {children}
+      {caption}
+    </div>
+  )
+}
+
 function buildDailyGrid(years, dailyRows) {
   if (!years.length) return []
   const byDate = {}
@@ -68,6 +115,7 @@ export default function App() {
   const [subject, setSubject] = useState('')
   const [year, setYear] = useState('')
   const [metric, setMetric] = useState('avg')
+  const [cardOrder, setCardOrder] = useState(loadCardOrder)
 
   const [scoreData, setScoreData] = useState([])
   const [scoresByRegion, setScoresByRegion] = useState([])
@@ -83,6 +131,25 @@ export default function App() {
   useEffect(() => {
     document.documentElement.style.setProperty('--bg-grayscale', grayscaleForYear(year))
   }, [year])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(CARD_ORDER_STORAGE_KEY, JSON.stringify(cardOrder))
+    } catch {
+      // ignore blocked/unavailable storage -- reordering still works this session
+    }
+  }, [cardOrder])
+
+  function moveCard(id, direction) {
+    setCardOrder((prev) => {
+      const idx = prev.indexOf(id)
+      const swapIdx = idx + direction
+      if (swapIdx < 0 || swapIdx >= prev.length) return prev
+      const next = [...prev]
+      ;[next[idx], next[swapIdx]] = [next[swapIdx], next[idx]]
+      return next
+    })
+  }
 
   useEffect(() => {
     fetchScores({ region: selectedRegion, subject })
@@ -159,6 +226,10 @@ export default function App() {
     <div className="app-shell">
       <header className="app-header">
         <h1>Ukraine Exam Scores & Wartime Disruption</h1>
+        <p>
+          Explore NMT/ZNO exam results alongside air-raid alert history, by region and year.
+          This tool is exploratory — it does not establish that alerts caused any change in scores.
+        </p>
       </header>
 
       <div className="layout-grid">
@@ -207,51 +278,74 @@ export default function App() {
         </div>
 
         <div>
-          <div className="card">
-            <p className="card-title">Score trend — {regionLabel}</p>
-            <ScoreChart
-              data={scoreData}
-              metric={metric}
-              regionLabel={regionLabel}
-              subjectLabel={subjectLabel}
-              years={meta.years}
-            />
-            {meta.notes['2022'] && (
-              <p className="chart-caption">{meta.notes['2022']}</p>
-            )}
-          </div>
+          {cardOrder.map((id, index) => {
+            const shared = {
+              canMoveUp: index > 0,
+              canMoveDown: index < cardOrder.length - 1,
+              onMoveUp: () => moveCard(id, -1),
+              onMoveDown: () => moveCard(id, 1),
+            }
 
-          <div className="card">
-            <p className="card-title">Score by gender — {regionLabel}</p>
-            <GenderPyramidChart
-              data={scoresBySex}
-              regionLabel={regionLabel}
-              subjectLabel={subjectLabel}
-            />
-          </div>
-
-          <div className="card">
-            <p className="card-title">Alerts over time — {regionLabel}</p>
-            <AlertsLineChart
-              data={alertsDailySeries}
-              years={meta.years}
-              regionLabel={regionLabel}
-              durationNote={meta.notes.alert_duration}
-            />
-          </div>
-
-          <div className="card">
-            <p className="card-title">
-              Alert exposure vs. avg score {year ? `— ${year}` : '— all years summed'} — {subjectLabel}
-            </p>
-            {correlation && (
-              <CorrelationScatter
-                points={correlation.points}
-                pearsonR={correlation.pearson_r}
-                disclaimer={correlation.disclaimer}
-              />
-            )}
-          </div>
+            if (id === 'score') {
+              return (
+                <ChartCard
+                  key={id}
+                  {...shared}
+                  title={`Score trend — ${regionLabel}`}
+                  caption={meta.notes['2022'] && <p className="chart-caption">{meta.notes['2022']}</p>}
+                >
+                  <ScoreChart
+                    data={scoreData}
+                    metric={metric}
+                    regionLabel={regionLabel}
+                    subjectLabel={subjectLabel}
+                    years={meta.years}
+                  />
+                </ChartCard>
+              )
+            }
+            if (id === 'gender') {
+              return (
+                <ChartCard key={id} {...shared} title={`Score by gender — ${regionLabel}`}>
+                  <GenderPyramidChart
+                    data={scoresBySex}
+                    regionLabel={regionLabel}
+                    subjectLabel={subjectLabel}
+                  />
+                </ChartCard>
+              )
+            }
+            if (id === 'alerts') {
+              return (
+                <ChartCard key={id} {...shared} title={`Alerts over time — ${regionLabel}`}>
+                  <AlertsLineChart
+                    data={alertsDailySeries}
+                    years={meta.years}
+                    regionLabel={regionLabel}
+                    durationNote={meta.notes.alert_duration}
+                  />
+                </ChartCard>
+              )
+            }
+            if (id === 'correlation') {
+              return (
+                <ChartCard
+                  key={id}
+                  {...shared}
+                  title={`Alert exposure vs. avg score ${year ? `— ${year}` : '— all years summed'} — ${subjectLabel}`}
+                >
+                  {correlation && (
+                    <CorrelationScatter
+                      points={correlation.points}
+                      pearsonR={correlation.pearson_r}
+                      disclaimer={correlation.disclaimer}
+                    />
+                  )}
+                </ChartCard>
+              )
+            }
+            return null
+          })}
         </div>
       </div>
     </div>

@@ -9,9 +9,14 @@ node_modules/
 dist/
 frontend/.vite/
 
-# Data (raw and processed, both regenerable / too large for git)
+# Raw data is too large for git and regenerable via the ETL script.
 backend/data/raw/
-backend/data/processed/
+
+# Processed data is regenerable too, but aggregates.json is the one small
+# servable artifact the whole app depends on at runtime -- committed so a
+# fresh deploy (e.g. Render) has real data without needing the raw CSVs.
+backend/data/processed/*
+!backend/data/processed/aggregates.json
 
 # OS
 .DS_Store

@@ -1,4 +1,5 @@
 import json
+import os
 from collections import defaultdict
 from pathlib import Path
 
@@ -20,12 +21,17 @@ DATA_PATH = Path(__file__).resolve().parent.parent / "data" / "processed" / "agg
 
 app = FastAPI(title="Ukraine Exam Scores & Wartime Disruption API")
 
+DEFAULT_ORIGINS = [
+    "http://localhost:5173", "http://127.0.0.1:5173",
+    "http://localhost:5174", "http://127.0.0.1:5174",
+]
+# Comma-separated extra allowed origins (e.g. the deployed Vercel URL),
+# on top of the local dev ports above.
+EXTRA_ORIGINS = [o.strip() for o in os.environ.get("CORS_ORIGINS", "").split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173", "http://127.0.0.1:5173",
-        "http://localhost:5174", "http://127.0.0.1:5174",
-    ],
+    allow_origins=DEFAULT_ORIGINS + EXTRA_ORIGINS,
     allow_methods=["GET"],
     allow_headers=["*"],
 )
